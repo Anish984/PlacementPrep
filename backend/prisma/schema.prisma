@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  email        String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  attempts     QuizAttempt[]
+  sessions     QuizSession[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  subjects  Subject[]
+}
+
+model Subject {
+  id         String   @id @default(uuid())
+  categoryId String
+  name       String
+  slug       String
+  createdAt  DateTime @default(now())
+  category   Category @relation(fields: [categoryId], references: [id])
+  topics     Topic[]
+
+  @@unique([categoryId, slug])
+}
+
+model Topic {
+  id        String        @id @default(uuid())
+  subjectId String
+  name      String
+  slug      String
+  createdAt DateTime      @default(now())
+  questions Question[]
+  sessions  QuizSession[]
+  subject   Subject       @relation(fields: [subjectId], references: [id])
+
+  @@unique([subjectId, slug])
+}
+
+model Question {
+  id            String        @id @default(uuid())
+  topicId       String
+  questionText  String
+  options       Json
+  correctAnswer Int
+  explanation   String
+  difficulty    Difficulty
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  topic         Topic         @relation(fields: [topicId], references: [id])
+  attempts      QuizAttempt[]
+}
+
+model QuizSession {
+  id             String    @id @default(uuid())
+  userId         String
+  topicId        String
+  totalQuestions Int
+  correctAnswers Int
+  score          Int
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  user           User      @relation(fields: [userId], references: [id])
+  topic          Topic     @relation(fields: [topicId], references: [id])
+  attempts       QuizAttempt[]
+}
+
+model QuizAttempt {
+  id               String      @id @default(uuid())
+  userId           String
+  questionId       String
+  sessionId        String
+  selectedAnswer   Int
+  isCorrect        Boolean
+  timeTakenSeconds Int?
+  attemptedAt      DateTime    @default(now())
+  user             User        @relation(fields: [userId], references: [id])
+  question         Question    @relation(fields: [questionId], references: [id])
+  session          QuizSession @relation(fields: [sessionId], references: [id])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
