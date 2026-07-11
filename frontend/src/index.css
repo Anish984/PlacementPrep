@@ -1,86 +1,296 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap");
 @import "tailwindcss";
-@import "tw-animate-css";
-
-:root {
-  --font-sans: "DM Sans", system-ui, sans-serif;
-  --font-serif: "Source Serif 4", Georgia, serif;
-
-  --background: #f4f1ea;
-  --foreground: #1c2b3a;
-  --card: #ffffff;
-  --card-foreground: #1c2b3a;
-  --primary: #1a5f7a;
-  --primary-foreground: #ffffff;
-  --secondary: #e8f0f4;
-  --secondary-foreground: #1a5f7a;
-  --muted: #eef2f6;
-  --muted-foreground: #5c6b7a;
-  --accent: #c45d2c;
-  --accent-foreground: #ffffff;
-  --success: #2d7a4f;
-  --success-bg: #e8f5ee;
-  --warning: #b45309;
-  --warning-bg: #fef3e2;
-  --destructive: #b91c1c;
-  --border: #d8e0e8;
-  --input: #d8e0e8;
-  --ring: #1a5f7a;
-  --radius: 0.75rem;
-  --shadow-sm: 0 1px 2px rgba(28, 43, 58, 0.06);
-  --shadow-md: 0 4px 16px rgba(28, 43, 58, 0.08);
-  --shadow-lg: 0 12px 40px rgba(28, 43, 58, 0.1);
-}
 
 @layer base {
-  * {
-    border-color: var(--border);
+  :root {
+    --primary: #15803d;
+    --primary-hover: #166534;
+    --primary-soft: #dcfce7;
+
+    /* Light-mode base colors: use a soft whitish-green instead of pure white */
+    --background: #f3fbf6; /* very pale green */
+    --background-secondary: #eef7ee; /* slightly darker pale */
+
+    --card: #fbfff9; /* card surface with a subtle green tint */
+
+    --text: #111827;
+    --muted: #6b7280;
+
+    --border: #d1d5db; /* slightly darker for better visibility in light mode */
+
+    --success: #16a34a;
+    --danger: #dc2626;
+
+    --content-width: 1280px;
   }
 
-  html {
-    scroll-behavior: smooth;
+  .dark {
+    --primary: #22c55e;
+    --primary-hover: #16a34a;
+    --primary-soft: #14532d;
+
+    --background: #0b0f0c;
+    --background-secondary: #111827;
+
+    --card: #111827;
+
+    --text: #f9fafb;
+    --muted: #9ca3af;
+
+    --border: #374151;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
   }
 
   body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    background: var(--background);
+    color: var(--text);
+
+    font-family:
+      Inter,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
+
+    line-height: 1.6;
   }
 
-  h1, h2, h3 {
-    font-family: var(--font-serif);
-    letter-spacing: -0.02em;
+  * {
+    box-sizing: border-box;
+  }
+
+  a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
   }
 }
 
+/* Light-mode enforcement: ensure components use the light theme variables
+   when `.dark` is not present. This maps common background, border and
+   gray text utilities to the CSS variables defined for light mode so
+   components appear consistently light and text appears dark/black.
+*/
 @layer utilities {
-  .page-container {
-    @apply max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10;
+  :root:not(.dark) {
+    /* backgrounds -> light card/background */
+    --_override-bg: var(--card);
   }
 
-  .hero-pattern {
-    background-color: var(--background);
-    background-image:
-      radial-gradient(circle at 20% 20%, rgba(26, 95, 122, 0.08) 0%, transparent 45%),
-      radial-gradient(circle at 80% 0%, rgba(196, 93, 44, 0.07) 0%, transparent 40%),
-      radial-gradient(circle at 60% 80%, rgba(26, 95, 122, 0.05) 0%, transparent 35%);
+  :root:not(.dark) .bg-white,
+  :root:not(.dark) .bg-gray-50,
+  :root:not(.dark) .bg-gray-100,
+  :root:not(.dark) .bg-gray-200,
+  :root:not(.dark) .bg-gray-300,
+  :root:not(.dark) .bg-gray-700,
+  :root:not(.dark) .bg-gray-800,
+  :root:not(.dark) .bg-gray-900,
+  :root:not(.dark) .bg-slate-900,
+  :root:not(.dark) .bg-slate-800 {
+    background-color: var(--card) !important;
   }
 
-  .card-surface {
+  /* borders -> light border */
+  :root:not(.dark) .border-gray-100,
+  :root:not(.dark) .border-gray-200,
+  :root:not(.dark) .border-gray-300,
+  :root:not(.dark) .border-gray-700,
+  :root:not(.dark) .border-gray-800 {
+    border-color: var(--border) !important;
+  }
+
+  /* gray text utilities -> use theme text color in light mode */
+  :root:not(.dark) .text-gray-900,
+  :root:not(.dark) .text-gray-800,
+  :root:not(.dark) .text-gray-700,
+  :root:not(.dark) .text-gray-600,
+  :root:not(.dark) .text-gray-500,
+  :root:not(.dark) .text-gray-400,
+  :root:not(.dark) .text-gray-300,
+  :root:not(.dark) .text-gray-200 {
+    color: var(--text) !important;
+  }
+
+  /* Also make any `.text-white` readable in light mode */
+  :root:not(.dark) .text-white {
+    color: var(--text) !important;
+  }
+}
+
+@layer components {
+  .page-title {
+    @apply text-3xl md:text-4xl font-bold mb-3;
+  }
+
+  .section-title {
+    @apply text-xl font-semibold mb-4;
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .box-white {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-sm);
+    border-radius: 12px;
+    padding: 1rem;
   }
 
-  .card-surface-hover {
-    transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+  .link-list {
+    @apply space-y-3;
+    list-style: none;
+    padding: 0;
+    margin: 0;
   }
 
-  .card-surface-hover:hover {
-    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+  .link-list li {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+
+  .link-list li:last-child {
+    border-bottom: none;
+  }
+
+  .option-btn {
+    width: 100%;
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .option-btn:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  .option-btn.correct {
+    background: #dcfce7;
+    border-color: #22c55e;
+  }
+
+  .option-btn.wrong {
+    background: #fee2e2;
+    border-color: #ef4444;
+  }
+
+  .history-grid {
+    @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .history-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .ok {
+    color: var(--success);
+  }
+
+  .err {
+    color: var(--danger);
   }
 }
+
+/* Theme safety: avoid accidental invisible text when utility classes like
+   `text-white` are used on light backgrounds. Prefer CSS variables for
+   most colors, but some components still use Tailwind `text-white`.
+   The rules below make sure `text-white` is reasonable in light mode
+   and that `text-black` isn't lost in dark mode. These are small
+   protective overrides (use sparingly).
+*/
+@layer utilities {
+  :root:not(.dark) .text-white {
+    color: var(--text) !important;
+  }
+
+  .dark .text-black {
+    color: var(--text) !important;
+  }
+}
+
+/* Map common Tailwind gray text utilities to appropriate colors in dark mode
+   so components that use fixed gray classes remain readable. These are
+   defensive overrides for legacy utility usage; prefer using CSS variables
+   or dark: variants on components instead. */
+@layer utilities {
+  .dark .text-gray-700,
+  .dark .text-gray-600,
+  .dark .text-gray-500,
+  .dark .text-gray-400 {
+    color: var(--muted) !important;
+  }
+
+  .dark .text-gray-300,
+  .dark .text-gray-200 {
+    color: rgba(255,255,255,0.85) !important;
+  }
+
+  .dark .text-gray-800,
+  .dark .text-gray-900 {
+    color: var(--text) !important;
+  }
+}
+
+/* Defensive background mapping:
+   - When not in dark mode, convert common dark background utilities
+     to the light-mode card/background variables so they don't remain
+     bluish/dark after toggling themes.
+   - When in dark mode, convert some light background utilities to
+     dark variables so cards stay consistent.
+*/
+@layer utilities {
+  :root:not(.dark) .bg-slate-900,
+  :root:not(.dark) .bg-gray-900,
+  :root:not(.dark) .bg-gray-800,
+  :root:not(.dark) .bg-gray-700 {
+    background-color: var(--card) !important;
+  }
+
+  :root:not(.dark) .border-gray-800,
+  :root:not(.dark) .border-gray-700 {
+    border-color: var(--border) !important;
+  }
+
+  .dark .bg-white,
+  .dark .bg-gray-50,
+  .dark .bg-gray-100 {
+    background-color: var(--card) !important;
+  }
+
+  .dark .border-gray-200,
+  .dark .border-gray-100 {
+    border-color: var(--border) !important;
+  }
+}
+
+/* (removed broad bg->var(--card) mapping to avoid overriding intended
+   light-mode backgrounds such as the navbar. Keep earlier targeted
+   overrides instead.) */

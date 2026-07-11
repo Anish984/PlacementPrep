@@ -1,41 +1,38 @@
 export default function Pagination({ page, totalPages, onPageChange }) {
-    if (totalPages <= 1) {
-        return null
-    }
+    if (totalPages <= 1) return null
 
-    const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+    const pages = []
+    for (let i = 1; i <= totalPages; i++) pages.push(i)
 
     return (
-        <div className="flex flex-wrap items-center justify-center gap-1.5 mt-10">
-            <button
-                disabled={page <= 1}
-                onClick={() => onPageChange(page - 1)}
-                className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-white text-sm font-medium disabled:opacity-40 hover:bg-[var(--muted)] transition-colors"
-            >
-                Prev
-            </button>
-
-            {pages.map((pageNumber) => (
-                <button
-                    key={pageNumber}
-                    onClick={() => onPageChange(pageNumber)}
-                    className={`min-w-[2.25rem] px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
-                        pageNumber === page
-                            ? "bg-[var(--primary)] border-[var(--primary)] text-white"
-                            : "border-[var(--border)] bg-white hover:bg-[var(--muted)]"
-                    }`}
-                >
-                    {pageNumber}
+        <p className="pager">
+            {page > 1 && (
+                <button type="button" className="btn btn-secondary" onClick={() => onPageChange(page - 1)}>
+                    Prev
                 </button>
-            ))}
-
-            <button
-                disabled={page >= totalPages}
-                onClick={() => onPageChange(page + 1)}
-                className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-white text-sm font-medium disabled:opacity-40 hover:bg-[var(--muted)] transition-colors"
-            >
-                Next
-            </button>
-        </div>
+            )}
+            {pages.map((n) =>
+                n === page ? (
+                    <strong key={n} style={{ marginRight: 6 }}>
+                        [{n}]
+                    </strong>
+                ) : (
+                    <button
+                        key={n}
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ marginRight: 4 }}
+                        onClick={() => onPageChange(n)}
+                    >
+                        {n}
+                    </button>
+                )
+            )}
+            {page < totalPages && (
+                <button type="button" className="btn btn-secondary" onClick={() => onPageChange(page + 1)}>
+                    Next
+                </button>
+            )}
+        </p>
     )
 }

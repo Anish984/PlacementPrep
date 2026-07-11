@@ -1,107 +1,314 @@
 import { Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { Button } from "./ui/button"
-import {
-    BookOpen,
-    LayoutDashboard,
-    History,
-    Gamepad2,
-    GraduationCap,
-    LogOut
-} from "lucide-react"
-
-const NAV_LINKS = [
-    { to: "/subjects", label: "Subjects", icon: BookOpen },
-    { to: "/playground", label: "Playground", icon: Gamepad2 },
-    { to: "/history", label: "History", icon: History, auth: true }
-]
+import { useEffect, useState } from "react"
 
 export default function Layout({ children }) {
     const { user, logout } = useAuth()
     const location = useLocation()
 
+    const [menuOpen, setMenuOpen] = useState(false)
+
+    function applyTheme(theme) {
+        document.documentElement.classList.toggle(
+            "dark",
+            theme === "dark"
+        )
+    }
+
+    function toggleTheme() {
+        const current =
+            localStorage.getItem("theme") || "light"
+
+        const next =
+            current === "light"
+                ? "dark"
+                : "light"
+
+        localStorage.setItem("theme", next)
+        applyTheme(next)
+    }
+
+    useEffect(() => {
+        const saved =
+            localStorage.getItem("theme") || "light"
+
+        applyTheme(saved)
+    }, [])
+
     function isActive(path) {
-        return location.pathname === path || location.pathname.startsWith(path + "/")
+        return (
+            location.pathname === path ||
+            location.pathname.startsWith(
+                path + "/"
+            )
+        )
+    }
+
+    function navClass(path) {
+        return `
+            px-3 py-2 rounded-md text-sm font-medium transition-colors
+            ${
+                isActive(path)
+                    ? "bg-green-100 text-green-100 dark:bg-green-900 dark:text-green-400"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-green-500 dark:hover:bg-green-200"
+            }
+        `
     }
 
     return (
-        <div className="min-h-screen flex flex-col hero-pattern">
-            <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/90 backdrop-blur-md">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-                    <Link to="/" className="flex items-center gap-2.5 shrink-0">
-                        <div className="w-9 h-9 rounded-lg bg-[var(--primary)] flex items-center justify-center">
-                            <GraduationCap className="w-5 h-5 text-white" />
+        <div className="min-h-screen" style={{ background: 'var(--background)', color: 'var(--text)' }}>
+            {/* Header */}
+
+            <header
+                className="sticky top-0 z-50"
+                style={{ borderBottom: '1px solid var(--border)', background: 'var(--background)' }}
+            >
+                <div className="max-w-7xl mx-auto px-4 lg:px-6">
+                    <div className="h-18 flex items-center justify-between">
+                        {/* Logo */}
+
+                        <Link
+                            to="/"
+                            className="flex items-center gap-3"
+                        >
+                            <div className="h-10 w-10 rounded-lg bg-green-800 text-white flex items-center justify-center font-bold">
+                                LQ
+                            </div>
+
+                            <div>
+                                <div className="font-bold text-2xl">
+                                    LetsQuiz
+                                </div>
+
+                                <div className="text-xs text-gray-800">
+                                    Placement Preparation
+                                </div>
+                            </div>
+                        </Link>
+
+                        {/* Desktop Navigation */}
+
+                        <nav className="hidden lg:flex items-center gap-2">
+                            <Link
+                                to="/subjects"
+                                className={navClass(
+                                    "/subjects"
+                                )}
+                            >
+                                Subjects
+                            </Link>
+
+                            <Link
+                                to="/playground"
+                                className={navClass(
+                                    "/playground"
+                                )}
+                            >
+                                Practice
+                            </Link>
+
+                            <Link
+                                to="/multiplayer"
+                                className={navClass(
+                                    "/multiplayer"
+                                )}
+                            >
+                                Quiz Arena
+                            </Link>
+
+                            {user && (
+                                <>
+                                    <Link
+                                        to="/dashboard"
+                                        className={navClass(
+                                            "/dashboard"
+                                        )}
+                                    >
+                                        Progress
+                                    </Link>
+
+                                    <Link
+                                        to="/history"
+                                        className={navClass(
+                                            "/history"
+                                        )}
+                                    >
+                                        History
+                                    </Link>
+                                </>
+                            )}
+                        </nav>
+
+                        {/* Desktop Right */}
+
+                        <div className="hidden lg:flex items-center gap-3">
+                            <Button
+                                variant="ghost"
+                                onClick={toggleTheme}
+                            >
+                                🌙
+                            </Button>
+
+                            {user ? (
+                                <>
+                                    <div className="text-sm">
+                                        <span className="text-gray-500">
+                                            Welcome,
+                                        </span>{" "}
+                                        <span className="font-semibold">
+                                            {
+                                                user.username
+                                            }
+                                        </span>
+                                    </div>
+
+                                    <Button
+                                        variant="outline"
+                                        onClick={
+                                            logout
+                                        }
+                                    >
+                                        Logout
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link to="/login">
+                                        <Button variant="outline">
+                                            Login
+                                        </Button>
+                                    </Link>
+
+                                    <Link to="/register">
+                                        <Button>
+                                            Register
+                                        </Button>
+                                    </Link>
+                                </>
+                            )}
                         </div>
-                        <span className="font-bold text-lg text-[var(--foreground)]">
-                            LetsQuiz
-                        </span>
-                    </Link>
 
-                    <nav className="hidden sm:flex items-center gap-1">
-                        {NAV_LINKS.filter((link) => !link.auth || user).map((link) => (
-                            <Link
-                                key={link.to}
-                                to={link.to}
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    isActive(link.to)
-                                        ? "bg-[var(--secondary)] text-[var(--primary)]"
-                                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]"
-                                }`}
-                            >
-                                <link.icon className="w-4 h-4" />
-                                {link.label}
-                            </Link>
-                        ))}
-                        {user && (
-                            <Link
-                                to="/dashboard"
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    isActive("/dashboard")
-                                        ? "bg-[var(--secondary)] text-[var(--primary)]"
-                                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]"
-                                }`}
-                            >
-                                <LayoutDashboard className="w-4 h-4" />
-                                Dashboard
-                            </Link>
-                        )}
-                    </nav>
+                        {/* Mobile Button */}
 
-                    <div className="flex items-center gap-2">
-                        {user ? (
-                            <>
-                                <span className="hidden md:inline text-sm text-[var(--muted-foreground)]">
-                                    {user.username}
-                                </span>
-                                <button
-                                    onClick={logout}
-                                    className="p-2 rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
-                                    title="Logout"
-                                >
-                                    <LogOut className="w-4 h-4" />
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <Button variant="ghost" size="sm" asChild>
-                                    <Link to="/login">Login</Link>
-                                </Button>
-                                <Button size="sm" asChild>
-                                    <Link to="/register">Sign up</Link>
-                                </Button>
-                            </>
-                        )}
+                        <button
+                            onClick={() =>
+                                setMenuOpen(
+                                    !menuOpen
+                                )
+                            }
+                            className="lg:hidden p-2 rounded-md border border-gray-300 dark:border-gray-700"
+                        >
+                            ☰
+                        </button>
                     </div>
                 </div>
+
+                {/* Mobile Menu */}
+
+                {menuOpen && (
+                    <div className="lg:hidden border-t border-gray-200 dark:border-gray-800">
+                        <div className="p-4 flex flex-col gap-2">
+                            <Link
+                                to="/subjects"
+                                className={navClass(
+                                    "/subjects"
+                                )}
+                                onClick={() =>
+                                    setMenuOpen(
+                                        false
+                                    )
+                                }
+                            >
+                                Subjects
+                            </Link>
+
+                            <Link
+                                to="/playground"
+                                className={navClass(
+                                    "/playground"
+                                )}
+                                onClick={() =>
+                                    setMenuOpen(
+                                        false
+                                    )
+                                }
+                            >
+                                Practice
+                            </Link>
+
+                            <Link
+                                to="/multiplayer"
+                                className={navClass(
+                                    "/multiplayer"
+                                )}
+                                onClick={() =>
+                                    setMenuOpen(
+                                        false
+                                    )
+                                }
+                            >
+                                Quiz Arena
+                            </Link>
+
+                            {user && (
+                                <>
+                                    <Link
+                                        to="/dashboard"
+                                        className={navClass(
+                                            "/dashboard"
+                                        )}
+                                    >
+                                        Progress
+                                    </Link>
+
+                                    <Link
+                                        to="/history"
+                                        className={navClass(
+                                            "/history"
+                                        )}
+                                    >
+                                        History
+                                    </Link>
+                                </>
+                            )}
+
+                            <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
+                                {user ? (
+                                    <Button
+                                        variant="outline"
+                                        onClick={
+                                            logout
+                                        }
+                                    >
+                                        Logout
+                                    </Button>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <Link to="/login">
+                                            <Button variant="outline">
+                                                Login
+                                            </Button>
+                                        </Link>
+
+                                        <Link to="/register">
+                                            <Button>
+                                                Register
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </header>
 
-            <main className="flex-1">{children}</main>
+            {/* Main Content */}
 
-            <footer className="border-t border-[var(--border)] bg-white/60 mt-auto">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 text-center text-sm text-[var(--muted-foreground)]">
-                    LetsQuiz — Practice placement aptitude & technical questions
-                </div>
-            </footer>
+            <main className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+                {children}
+            </main>
         </div>
     )
 }

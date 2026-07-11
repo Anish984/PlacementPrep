@@ -1,6 +1,6 @@
 import prisma from "../lib/prisma.js"
 
-const QUESTION_TIME_LIMIT_SECONDS = 30
+const QUESTION_TIME_LIMIT_SECONDS = 10
 
 const POINTS_BY_DIFFICULTY = {
     EASY: 10,
@@ -51,26 +51,75 @@ export async function pickQuestionsForTopic(topicId, count) {
 }
 
 /**
- * Start a playground quiz session (saved to database).
+ * Pick questions for a broader scope: topic, subject or category.
+ * scope: { topicId?, subjectId?, categoryId? }
  */
-export async function startQuizSession(userId, topicId, count) {
-    const topic = await prisma.topic.findUnique({
-        where: { id: topicId },
-        include: {
-            subject: { include: { category: true } }
-        }
-    })
-
-    if (!topic) {
-        throw new Error("Topic not found")
+export async function pickQuestionsForScope(scope, count) {
+    if (scope.topicId) {
+        return pickQuestionsForTopic(scope.topicId, count)
     }
 
-    const questions = await pickQuestionsForTopic(topicId, count)
+    let where = {}
+    if (scope.subjectId) {
+        where = { topic: { subjectId: scope.subjectId } }
+    } else if (scope.categoryId) {
+        where = { topic: { subject: { categoryId: scope.categoryId } } }
+    }
+
+    const allQuestions = await prisma.question.findMany({
+        where,
+        include: { topic: true }
+    })
+
+    if (!allQuestions || allQuestions.length === 0) {
+        throw new Error("No questions found for the selected scope")
+    }
+
+    const questionCount = Math.min(count, allQuestions.length)
+    return shuffle(allQuestions).slice(0, questionCount)
+}
+
+/**
+ * Start a playground quiz session (saved to database).
+ */
+export async function startQuizSession(userId, scope, count) {
+    // scope can be { topicId } or { subjectId } or { categoryId }
+    // pick questions accordingly
+    const questions = await pickQuestionsForScope(scope, count)
+
+    // determine a representative topic for the session record (use first question's topic)
+    const firstTopicId = questions[0].topicId || questions[0].topic?.id
+    let topicInfo = { name: "Mixed topics", slug: "mixed", subject: "", category: "" }
+
+    if (scope.topicId) {
+        const topic = await prisma.topic.findUnique({
+            where: { id: scope.topicId },
+            include: { subject: { include: { category: true } } }
+        })
+        if (!topic) throw new Error("Topic not found")
+        topicInfo = {
+            name: topic.name,
+            slug: topic.slug,
+            subject: topic.subject.name,
+            category: topic.subject.category.name
+        }
+    } else if (scope.subjectId) {
+        const subject = await prisma.subject.findUnique({
+            where: { id: scope.subjectId },
+            include: { category: true }
+        })
+        if (!subject) throw new Error("Subject not found")
+        topicInfo = { name: `All topics in ${subject.name}`, slug: `subject-${subject.id}`, subject: subject.name, category: subject.category.name }
+    } else if (scope.categoryId) {
+        const category = await prisma.category.findUnique({ where: { id: scope.categoryId } })
+        if (!category) throw new Error("Category not found")
+        topicInfo = { name: `All topics in ${category.name}`, slug: `category-${category.id}`, subject: "", category: category.name }
+    }
 
     const session = await prisma.quizSession.create({
         data: {
             userId,
-            topicId,
+            topicId: firstTopicId,
             totalQuestions: questions.length,
             correctAnswers: 0,
             score: 0
@@ -81,12 +130,7 @@ export async function startQuizSession(userId, topicId, count) {
         sessionId: session.id,
         totalQuestions: questions.length,
         timeLimit: QUESTION_TIME_LIMIT_SECONDS,
-        topic: {
-            name: topic.name,
-            slug: topic.slug,
-            subject: topic.subject.name,
-            category: topic.subject.category.name
-        },
+        topic: topicInfo,
         questions: questions.map(stripAnswer)
     }
 }

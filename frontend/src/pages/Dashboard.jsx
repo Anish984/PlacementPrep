@@ -1,47 +1,42 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import Layout from "../components/Layout"
-import PageHeader from "../components/PageHeader"
-import StatCard from "../components/StatCard"
-import { Card, CardContent, CardHeader } from "../components/ui/Card"
-import { Button } from "../components/ui/button"
+import Breadcrumb from "../components/Breadcrumb"
 import { useAuth } from "../context/AuthContext"
 import { api } from "../api/client"
-import {
-    Target,
-    Trophy,
-    Brain,
-    TrendingUp,
-    AlertTriangle,
-    ArrowRight,
-    BookOpen
-} from "lucide-react"
 
 export default function Dashboard() {
     const { user } = useAuth()
+
     const [data, setData] = useState(null)
     const [error, setError] = useState("")
-    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         if (!user) return
 
         api.getDashboard()
             .then(setData)
-            .catch((err) => setError(err.message))
-            .finally(() => setLoading(false))
+            .catch((e) => setError(e.message))
     }, [user])
 
     if (!user) {
         return (
             <Layout>
-                <div className="page-container text-center py-20">
-                    <p className="text-[var(--muted-foreground)] mb-4">
-                        Sign in to view your learning dashboard.
+                <div className="max-w-xl">
+                    <h1 className="text-3xl font-bold">
+                        Progress Dashboard
+                    </h1>
+
+                    <p className="mt-4 text-gray-600 dark:text-gray-400">
+                        Please{" "}
+                        <Link
+                            to="/login"
+                            className="text-green-800 font-medium"
+                        >
+                            login
+                        </Link>{" "}
+                        to view your progress.
                     </p>
-                    <Button asChild>
-                        <Link to="/login">Login</Link>
-                    </Button>
                 </div>
             </Layout>
         )
@@ -49,187 +44,229 @@ export default function Dashboard() {
 
     return (
         <Layout>
-            <div className="page-container">
-                <PageHeader
-                    breadcrumb={[
-                        { label: "Home", to: "/" },
-                        { label: "Dashboard" }
-                    ]}
-                    title={`Hello, ${user.username}`}
-                    description="Track your progress, spot weak topics, and focus your practice where it matters most."
-                    action={
-                        <Button asChild>
-                            <Link to="/playground">Start a quiz</Link>
-                        </Button>
-                    }
-                />
+            {/* <Breadcrumb
+                items={[
+                    { label: "Home", to: "/" },
+                    { label: "Progress" }
+                ]}
+            /> */}
 
-                {loading && (
-                    <p className="text-[var(--muted-foreground)]">Loading dashboard...</p>
-                )}
-                {error && (
-                    <p className="text-[var(--destructive)] bg-red-50 border border-red-200 rounded-lg p-4">
-                        {error}
-                    </p>
-                )}
+            {/* <section className="rounded-2xl bg-green-800 text-white p-8">
+                <h1 className="text-4xl font-bold">
+                    Welcome back, {user.username}
+                </h1>
 
-                {data && (
-                    <>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <p className="mt-3 text-green-100">
+                    Track your preparation journey and improve your weak topics.
+                </p>
+            </section> */}
+
+            {error && (
+                <div className="mt-6 rounded-xl border border-red-300 bg-red-50 text-red-700 p-4">
+                    {error}
+                </div>
+            )}
+
+            {!data && !error && (
+                <div className="mt-8">
+                    Loading...
+                </div>
+            )}
+
+            {data && (
+                <>
+                    {/* Stats */}
+
+                    <section className="mt-1">
+                        <h2 className="text-2xl font-bold mb-4">
+                            Overview
+                        </h2>
+
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                             <StatCard
-                                label="Quizzes completed"
+                                title="Quizzes Taken"
                                 value={data.totalQuizzes}
-                                icon={Trophy}
-                                tone="accent"
                             />
+
                             <StatCard
-                                label="Overall accuracy"
+                                title="Accuracy"
                                 value={`${data.accuracy}%`}
-                                icon={Target}
-                                tone="success"
                             />
+
                             <StatCard
-                                label="Average score"
+                                title="Average Score"
                                 value={data.averageScore}
-                                hint="points per quiz"
-                                icon={TrendingUp}
                             />
+
                             <StatCard
-                                label="Questions attempted"
+                                title="Attempts"
                                 value={data.totalAttempts}
-                                icon={Brain}
                             />
                         </div>
+                    </section>
 
-                        <div className="grid lg:grid-cols-5 gap-6">
-                            <Card className="lg:col-span-3">
-                                <CardHeader>
-                                    <div className="flex items-center gap-2">
-                                        <AlertTriangle className="w-5 h-5 text-[var(--accent)]" />
-                                        <h2 className="text-xl font-bold">Weak topics</h2>
-                                    </div>
-                                    <p className="text-sm text-[var(--muted-foreground)] mt-1">
-                                        Topics where your accuracy is lowest — practice these first.
-                                    </p>
-                                </CardHeader>
-                                <CardContent>
-                                    {data.weakTopics.length === 0 ? (
-                                        <div className="text-center py-10 px-4">
-                                            <p className="text-[var(--muted-foreground)] mb-4">
-                                                Complete a few playground quizzes to unlock weak-topic
-                                                predictions.
-                                            </p>
-                                            <Button variant="outline" asChild>
-                                                <Link to="/playground">Take a quiz</Link>
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {data.weakTopics.map((topic) => (
-                                                <WeakTopicRow key={topic.topicId} topic={topic} />
-                                            ))}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                    {/* Weak Topics */}
 
-                            <Card className="lg:col-span-2">
-                                <CardHeader>
-                                    <h2 className="text-xl font-bold">Recent quizzes</h2>
-                                </CardHeader>
-                                <CardContent>
-                                    {data.recentSessions.length === 0 ? (
-                                        <p className="text-sm text-[var(--muted-foreground)] py-6 text-center">
-                                            No quizzes yet.
-                                        </p>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {data.recentSessions.map((session) => (
-                                                <div
-                                                    key={session.id}
-                                                    className="flex justify-between items-center p-3 rounded-lg bg-[var(--muted)]/60"
-                                                >
-                                                    <div className="min-w-0">
-                                                        <p className="font-medium text-sm truncate">
-                                                            {session.topic}
-                                                        </p>
-                                                        <p className="text-xs text-[var(--muted-foreground)] truncate">
-                                                            {session.category} · {session.subject}
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-right shrink-0 ml-3">
-                                                        <p className="font-bold text-[var(--success)]">
-                                                            {session.score}
-                                                        </p>
-                                                        <p className="text-xs text-[var(--muted-foreground)]">
-                                                            {session.correctAnswers}/
-                                                            {session.totalQuestions}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <Button variant="ghost" className="w-full mt-4" asChild>
-                                        <Link to="/history">
-                                            View all history
-                                            <ArrowRight className="w-4 h-4 ml-1" />
-                                        </Link>
-                                    </Button>
-                                </CardContent>
-                            </Card>
+                    <section className="mt-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-2xl font-bold">
+                                Topics To Improve
+                            </h2>
+
+                            <span className="text-sm text-gray-500">
+                                Focus here first
+                            </span>
                         </div>
-                    </>
-                )}
-            </div>
+
+                        {data.weakTopics.length === 0 ? (
+                            <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-6">
+                                <p>
+                                    Great start. Complete more quizzes to get
+                                    personalized recommendations.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                {data.weakTopics.map((topic) => (
+                                    <div
+                                        key={topic.topicId}
+                                        className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-semibold text-lg">
+                                                    {topic.topicName}
+                                                </h3>
+
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    {topic.categoryName} •{" "}
+                                                    {topic.subjectName}
+                                                </p>
+                                            </div>
+
+                                            <div className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold">
+                                                {topic.accuracy}%
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-5 flex gap-2">
+                                            <Link
+                                                to={`/subjects/${topic.categorySlug}/${topic.subjectSlug}/${topic.topicSlug}`}
+                                            >
+                                                <button className="px-4 py-2 rounded-md bg-green-800 text-white hover:bg-green-800">
+                                                    Practice
+                                                </button>
+                                            </Link>
+
+                                            <Link
+                                                to="/playground"
+                                                state={{
+                                                    topicId:
+                                                        topic.topicId
+                                                }}
+                                            >
+                                                <button className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700">
+                                                    Quiz
+                                                </button>
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Recent Activity */}
+
+                    <section className="mt-10">
+                        <h2 className="text-2xl font-bold mb-4">
+                            Recent Quiz Activity
+                        </h2>
+
+                        {data.recentSessions.length === 0 ? (
+                            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+                                No quizzes completed yet.
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                {data.recentSessions.map((session) => (
+                                    <div
+                                        key={session.id}
+                                        className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-semibold">
+                                                    {session.topic}
+                                                </h3>
+
+                                                <p className="text-sm text-gray-500">
+                                                    {session.category} •{" "}
+                                                    {session.subject}
+                                                </p>
+                                            </div>
+
+                                            <div className="text-right">
+                                                <div className="font-bold text-lg text-green-800">
+                                                    {session.score}
+                                                </div>
+
+                                                <div className="text-xs text-gray-500">
+                                                    points
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <div className="flex justify-between text-sm mb-2">
+                                                <span>
+                                                    Correct Answers
+                                                </span>
+
+                                                <span>
+                                                    {
+                                                        session.correctAnswers
+                                                    }
+                                                    /
+                                                    {
+                                                        session.totalQuestions
+                                                    }
+                                                </span>
+                                            </div>
+
+                                            <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-green-600"
+                                                    style={{
+                                                        width: `${
+                                                            (session.correctAnswers /
+                                                                session.totalQuestions) *
+                                                            100
+                                                        }%`
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                </>
+            )}
         </Layout>
     )
 }
 
-function WeakTopicRow({ topic }) {
-    const practicePath = `/subjects/${topic.categorySlug}/${topic.subjectSlug}/${topic.topicSlug}`
-
+function StatCard({ title, value }) {
     return (
-        <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--muted)]/30">
-            <div className="flex flex-wrap justify-between gap-3 mb-3">
-                <div>
-                    <p className="font-semibold">{topic.topicName}</p>
-                    <p className="text-xs text-[var(--muted-foreground)]">
-                        {topic.categoryName} → {topic.subjectName}
-                    </p>
-                </div>
-                <div className="text-right">
-                    <p className="text-lg font-bold text-[var(--accent)]">
-                        {topic.accuracy}%
-                    </p>
-                    <p className="text-xs text-[var(--muted-foreground)]">
-                        {topic.correctAttempts}/{topic.totalAttempts} correct
-                    </p>
-                </div>
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+            <div className="text-sm text-gray-500">
+                {title}
             </div>
 
-            <div className="h-2 rounded-full bg-[var(--border)] overflow-hidden mb-3">
-                <div
-                    className="h-full rounded-full bg-[var(--accent)] transition-all"
-                    style={{ width: `${topic.accuracy}%` }}
-                />
-            </div>
-
-            <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
-                    <Link to={practicePath}>
-                        <BookOpen className="w-3.5 h-3.5" />
-                        Practice
-                    </Link>
-                </Button>
-                <Button size="sm" asChild>
-                    <Link
-                        to="/playground"
-                        state={{ topicId: topic.topicId }}
-                    >
-                        Quiz this topic
-                    </Link>
-                </Button>
+            <div className="mt-2 text-3xl font-bold text-green-800">
+                {value}
             </div>
         </div>
     )

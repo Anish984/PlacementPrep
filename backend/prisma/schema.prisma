@@ -19,10 +19,10 @@ model User {
 }
 
 model Category {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
+  slug      String    @unique
+  createdAt DateTime  @default(now())
   subjects  Subject[]
 }
 
@@ -39,14 +39,15 @@ model Subject {
 }
 
 model Topic {
-  id        String        @id @default(uuid())
-  subjectId String
-  name      String
-  slug      String
-  createdAt DateTime      @default(now())
-  questions Question[]
-  sessions  QuizSession[]
-  subject   Subject       @relation(fields: [subjectId], references: [id])
+  id                  String               @id @default(uuid())
+  subjectId           String
+  name                String
+  slug                String
+  createdAt           DateTime             @default(now())
+  questions           Question[]
+  sessions            QuizSession[]
+  subject             Subject              @relation(fields: [subjectId], references: [id])
+  multiplayerSessions MultiplayerSession[]
 
   @@unique([subjectId, slug])
 }
@@ -66,16 +67,16 @@ model Question {
 }
 
 model QuizSession {
-  id             String    @id @default(uuid())
+  id             String        @id @default(uuid())
   userId         String
   topicId        String
   totalQuestions Int
   correctAnswers Int
   score          Int
-  startedAt      DateTime  @default(now())
+  startedAt      DateTime      @default(now())
   completedAt    DateTime?
-  user           User      @relation(fields: [userId], references: [id])
-  topic          Topic     @relation(fields: [topicId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  topic          Topic         @relation(fields: [topicId], references: [id])
   attempts       QuizAttempt[]
 }
 
@@ -91,6 +92,33 @@ model QuizAttempt {
   user             User        @relation(fields: [userId], references: [id])
   question         Question    @relation(fields: [questionId], references: [id])
   session          QuizSession @relation(fields: [sessionId], references: [id])
+}
+
+// Multiplayer-specific session storage
+model MultiplayerSession {
+  id             String               @id @default(uuid())
+  roomCode       String
+  topicId        String
+  topic          Topic                @relation(fields: [topicId], references: [id])
+  hostPlayerId   String
+  totalQuestions Int
+  createdAt      DateTime             @default(now())
+  completedAt    DateTime?
+  attempts       MultiplayerAttempt[]
+}
+
+model MultiplayerAttempt {
+  id               String   @id @default(uuid())
+  sessionId        String
+  playerId         String
+  username         String
+  questionId       String
+  selectedAnswer   Int
+  isCorrect        Boolean
+  timeTakenSeconds Int?
+  attemptedAt      DateTime @default(now())
+
+  session MultiplayerSession @relation(fields: [sessionId], references: [id])
 }
 
 enum Difficulty {

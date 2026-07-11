@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import Layout from "../components/Layout"
-import { Card, CardContent } from "../components/ui/Card"
-import { Button } from "../components/ui/button"
 import { api } from "../api/client"
-import { Clock } from "lucide-react"
-
-const DEFAULT_TIME_LIMIT = 30
 
 export default function Quiz() {
     const location = useLocation()
@@ -14,184 +9,309 @@ export default function Quiz() {
 
     const sessionId = location.state?.sessionId
     const questions = location.state?.questions || []
-    const topicInfo = location.state?.topic
-    const timeLimit = location.state?.timeLimit || DEFAULT_TIME_LIMIT
+    const topic = location.state?.topic
+    const timeLimit = location.state?.timeLimit || 30
 
-    const [currentIndex, setCurrentIndex] = useState(0)
-    const [selectedIndex, setSelectedIndex] = useState(null)
+    const [idx, setIdx] = useState(0)
+    const [picked, setPicked] = useState(null)
     const [feedback, setFeedback] = useState(null)
-    const [timeLeft, setTimeLeft] = useState(timeLimit)
-    const [questionStartTime, setQuestionStartTime] = useState(Date.now())
-    const [submitting, setSubmitting] = useState(false)
 
-    const currentQuestion = questions[currentIndex]
-    const isLastQuestion = currentIndex + 1 >= questions.length
+    const [timeLeft, setTimeLeft] = useState(timeLimit)
+    const [t0, setT0] = useState(Date.now())
+
+    const q = questions[idx]
 
     useEffect(() => {
-        if (!sessionId || !currentQuestion || selectedIndex !== null || feedback) return
+        if (!q || picked !== null || feedback) return
 
         const timer = setInterval(() => {
-            setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1))
+            setTimeLeft((prev) =>
+                prev <= 1 ? 0 : prev - 1
+            )
         }, 1000)
 
         return () => clearInterval(timer)
-    }, [currentIndex, selectedIndex, feedback, sessionId, currentQuestion])
+    }, [q, picked, feedback])
 
     useEffect(() => {
-        if (timeLeft === 0 && selectedIndex === null && currentQuestion && !submitting) {
-            handleAnswer(-1)
+        if (
+            timeLeft === 0 &&
+            picked === null &&
+            q
+        ) {
+            submit(-1)
         }
     }, [timeLeft])
 
-    async function handleAnswer(answerIndex) {
-        if (submitting || feedback || !currentQuestion) return
+    async function submit(answer) {
+        if (picked !== null || !q) return
 
-        setSubmitting(true)
-        setSelectedIndex(answerIndex)
-
-        const timeTaken = Math.round((Date.now() - questionStartTime) / 1000)
+        setPicked(answer)
 
         try {
-            const result = await api.submitQuizAnswer({
-                sessionId,
-                questionId: currentQuestion.id,
-                selectedAnswer: answerIndex,
-                timeTakenSeconds: timeTaken
-            })
+            const result =
+                await api.submitQuizAnswer({
+                    sessionId,
+                    questionId: q.id,
+                    selectedAnswer: answer,
+                    timeTakenSeconds: Math.round(
+                        (Date.now() - t0) / 1000
+                    )
+                })
+
             setFeedback(result)
-        } catch (error) {
+        } catch (e) {
             setFeedback({
                 isCorrect: false,
-                explanation: error.message,
-                correctAnswer: null,
-                points: 0
+                explanation: e.message
             })
-        } finally {
-            setSubmitting(false)
         }
     }
 
-    async function handleNext() {
-        if (isLastQuestion) {
-            const result = await api.completeQuiz(sessionId)
-            navigate("/results", { state: result })
+    async function nextQuestion() {
+        if (idx + 1 >= questions.length) {
+            const result =
+                await api.completeQuiz(sessionId)
+
+            navigate("/results", {
+                state: result
+            })
+
             return
         }
 
-        setCurrentIndex((index) => index + 1)
-        setSelectedIndex(null)
+        setIdx((prev) => prev + 1)
+        setPicked(null)
         setFeedback(null)
         setTimeLeft(timeLimit)
-        setQuestionStartTime(Date.now())
+        setT0(Date.now())
     }
 
-    function getOptionClass(optionIndex) {
-        if (selectedIndex === null) {
-            return "border-[var(--border)] bg-white hover:border-[var(--primary)] cursor-pointer"
-        }
-        if (feedback && optionIndex === feedback.correctAnswer) {
-            return "border-[var(--success)] bg-[var(--success-bg)]"
-        }
-        if (optionIndex === selectedIndex && !feedback?.isCorrect) {
-            return "border-[var(--destructive)] bg-red-50"
-        }
-        return "border-[var(--border)] opacity-50"
-    }
-
-    if (!sessionId || questions.length === 0) {
+    if (!sessionId || !q) {
         return (
             <Layout>
-                <div className="page-container text-center py-20">
-                    <p className="text-[var(--muted-foreground)] mb-4">No active quiz session.</p>
-                    <Button asChild>
-                        <Link to="/playground">Go to Playground</Link>
-                    </Button>
+                <div className="max-w-xl">
+                    <h1 className="text-3xl font-bold">
+                        No Quiz Found
+                    </h1>
+
+                    <p className="mt-3 text-gray-600 dark:text-gray-400">
+                        Start a new quiz from the
+                        playground.
+                    </p>
+
+                    <Link
+                        to="/playground"
+                        className="inline-block mt-4 text-green-800 font-medium"
+                    >
+                        Go To Playground →
+                    </Link>
                 </div>
             </Layout>
         )
     }
 
+    const progress =
+        ((idx + 1) / questions.length) * 100
+
     return (
         <Layout>
-            <div className="page-container max-w-2xl">
-                {topicInfo && (
-                    <p className="text-sm text-[var(--muted-foreground)] mb-4">
-                        {topicInfo.category} → {topicInfo.subject} → {topicInfo.name}
-                    </p>
+            <div className="max-w-4xl mx-auto">
+                {/* Topic */}
+
+                {topic && (
+                    <div className="mb-4 text-sm text-gray-500">
+                        {topic.category} •{" "}
+                        {topic.subject} • {topic.name}
+                    </div>
                 )}
 
-                <div className="flex justify-between items-center mb-6">
-                    <div>
-                        <p className="text-sm text-[var(--muted-foreground)]">Progress</p>
-                        <p className="font-bold text-lg">
-                            Question {currentIndex + 1}{" "}
-                            <span className="text-[var(--muted-foreground)] font-normal">
-                                of {questions.length}
-                            </span>
-                        </p>
+                {/* Progress */}
+
+                <div className="mb-4">
+                    <div className="flex justify-between mb-2 text-sm">
+                        <span>
+                            Question {idx + 1} of{" "}
+                            {questions.length}
+                        </span>
+
+                        <span>
+                            {Math.round(progress)}%
+                            Complete
+                        </span>
                     </div>
-                    <div
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold text-lg ${
-                            timeLeft <= 5
-                                ? "bg-red-50 text-[var(--destructive)]"
-                                : "bg-[var(--secondary)] text-[var(--primary)]"
-                        }`}
-                    >
-                        <Clock className="w-4 h-4" />
-                        {timeLeft}s
+
+                    <div className="h-3 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                        <div
+                            className="h-full bg-green-800"
+                            style={{
+                                width: `${progress}%`
+                            }}
+                        />
                     </div>
                 </div>
 
-                <Card>
-                    <CardContent className="pt-6">
-                        <span className="text-xs font-medium text-[var(--primary)] bg-[var(--secondary)] px-2 py-1 rounded">
-                            {currentQuestion.difficulty}
+                {/* Timer */}
+
+                <div className="mb-6 flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                        Answer before time runs
+                        out
+                    </div>
+
+                    <div
+                        className={`
+                        px-4 py-2 rounded-full font-semibold
+                        ${
+                            timeLeft <= 10
+                                ? "bg-red-100 text-red-700"
+                                : "bg-green-100 text-green-800"
+                        }
+                    `}
+                    >
+                        ⏱ {timeLeft}s
+                    </div>
+                </div>
+
+                {/* Question */}
+
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-sm">
+                            {q.difficulty}
                         </span>
+                    </div>
 
-                        <h2 className="text-xl font-[family-name:var(--font-serif)] font-semibold mt-4 mb-6 leading-snug">
-                            {currentQuestion.questionText}
-                        </h2>
+                    <h1 className="text-2xl font-semibold leading-relaxed">
+                        {q.questionText}
+                    </h1>
 
-                        <div className="space-y-2.5">
-                            {currentQuestion.options.map((option, index) => (
+                    {/* Options */}
+
+                    <div className="mt-8">
+                        {q.options.map((option, i) => {
+                            let styles =
+                                "border-gray-200 dark:border-gray-700"
+
+                            if (
+                                picked !== null &&
+                                feedback
+                            ) {
+                                if (
+                                    i ===
+                                    feedback.correctAnswer
+                                ) {
+                                    styles =
+                                        "border-green-500 bg-green-50 dark:bg-green-950/20"
+                                } else if (
+                                    i === picked &&
+                                    !feedback.isCorrect
+                                ) {
+                                    styles =
+                                        "border-red-500 bg-red-50 dark:bg-red-950/20"
+                                }
+                            }
+
+                            return (
                                 <button
-                                    key={index}
-                                    type="button"
-                                    disabled={selectedIndex !== null}
-                                    onClick={() => handleAnswer(index)}
-                                    className={`w-full text-left px-4 py-3 rounded-lg border text-sm transition ${getOptionClass(index)}`}
+                                    key={i}
+                                    disabled={
+                                        picked !== null
+                                    }
+                                    onClick={() =>
+                                        submit(i)
+                                    }
+                                    className={`
+                                    w-full
+                                    text-left
+                                    rounded-xl
+                                    border
+                                    p-4
+                                    mb-3
+                                    transition
+                                    hover:border-green-600
+                                    ${styles}
+                                `}
                                 >
-                                    {option}
-                                </button>
-                            ))}
-                        </div>
+                                    <div className="flex gap-4">
+                                        <div className="font-bold text-green-800">
+                                            {String.fromCharCode(
+                                                65 +
+                                                    i
+                                            )}
+                                            .
+                                        </div>
 
-                        {feedback && (
-                            <div className="mt-6 space-y-4">
-                                <div
-                                    className={`p-4 rounded-lg border text-sm ${
-                                        feedback.isCorrect
-                                            ? "bg-[var(--success-bg)] border-[var(--success)]/30 text-[var(--success)]"
-                                            : "bg-red-50 border-red-200 text-[var(--destructive)]"
-                                    }`}
-                                >
-                                    <p className="font-semibold">
-                                        {feedback.isCorrect
-                                            ? `Correct! +${feedback.points} points`
-                                            : "Incorrect"}
-                                    </p>
-                                    {feedback.explanation && (
-                                        <p className="mt-1 opacity-80">{feedback.explanation}</p>
-                                    )}
+                                        <div>
+                                            {option}
+                                        </div>
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {/* Feedback */}
+
+                    {feedback && (
+                        <div className="mt-8">
+                            <div
+                                className={`
+                                rounded-xl
+                                p-4
+                                border
+                                ${
+                                    feedback.isCorrect
+                                        ? "bg-green-50 border-green-200 text-green-800"
+                                        : "bg-red-50 border-red-200 text-red-700"
+                                }
+                            `}
+                            >
+                                <div className="font-semibold">
+                                    {feedback.isCorrect
+                                        ? "✓ Correct Answer"
+                                        : "✗ Incorrect Answer"}
                                 </div>
 
-                                <Button onClick={handleNext} className="w-full">
-                                    {isLastQuestion ? "View results" : "Next question"}
-                                </Button>
+                                {feedback.points !==
+                                    undefined && (
+                                    <div className="mt-1 text-sm">
+                                        Score Earned:{" "}
+                                        {
+                                            feedback.points
+                                        }
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+
+                            {feedback.explanation && (
+                                <div className="mt-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4">
+                                    <div className="font-semibold mb-2">
+                                        Explanation
+                                    </div>
+
+                                    <p className="text-gray-700 dark:text-gray-300">
+                                        {
+                                            feedback.explanation
+                                        }
+                                    </p>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={
+                                    nextQuestion
+                                }
+                                className="mt-6 bg-green-800 hover:bg-green-800 text-white px-6 py-3 rounded-xl font-medium"
+                            >
+                                {idx + 1 >=
+                                questions.length
+                                    ? "Finish Quiz"
+                                    : "Next Question"}
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </Layout>
     )

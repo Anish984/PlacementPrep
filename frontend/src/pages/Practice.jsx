@@ -1,85 +1,169 @@
 import { useEffect, useState } from "react"
 import { useParams, useSearchParams } from "react-router-dom"
 import Layout from "../components/Layout"
-import PageHeader from "../components/PageHeader"
+import Breadcrumb from "../components/Breadcrumb"
 import Pagination from "../components/Pagination"
 import PracticeQuestion from "../components/PracticeQuestion"
 import { api } from "../api/client"
 
-const QUESTIONS_PER_PAGE = 5
+const PER_PAGE = 5
 
 export default function Practice() {
-    const { categorySlug, subjectSlug, topicSlug } = useParams()
-    const [searchParams, setSearchParams] = useSearchParams()
-    const page = parseInt(searchParams.get("page") || "1", 10)
+    const { categorySlug, subjectSlug, topicSlug } =
+        useParams()
+
+    const [searchParams, setSearchParams] =
+        useSearchParams()
+
+    const page = parseInt(
+        searchParams.get("page") || "1",
+        10
+    )
 
     const [data, setData] = useState(null)
     const [error, setError] = useState("")
-    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        setLoading(true)
-        setError("")
-
         api.getPracticeQuestions(
             categorySlug,
             subjectSlug,
             topicSlug,
             page,
-            QUESTIONS_PER_PAGE
+            PER_PAGE
         )
             .then(setData)
-            .catch((err) => setError(err.message))
-            .finally(() => setLoading(false))
-    }, [categorySlug, subjectSlug, topicSlug, page])
+            .catch((e) =>
+                setError(e.message)
+            )
+    }, [
+        categorySlug,
+        subjectSlug,
+        topicSlug,
+        page
+    ])
 
-    function handlePageChange(newPage) {
-        setSearchParams({ page: String(newPage) })
-        window.scrollTo({ top: 0, behavior: "smooth" })
-    }
-
-    const startingQuestionNumber = (page - 1) * QUESTIONS_PER_PAGE + 1
+    const startNum =
+        (page - 1) * PER_PAGE + 1
 
     return (
         <Layout>
-            <div className="page-container">
-                {data && (
-                    <PageHeader
-                        breadcrumb={[
-                            { label: "Home", to: "/" },
-                            { label: "Subjects", to: "/subjects" },
-                            { label: data.topic.category, to: `/subjects/${categorySlug}` },
-                            { label: data.topic.subject, to: `/subjects/${categorySlug}/${subjectSlug}` },
-                            { label: data.topic.name }
+            {data && (
+                <>
+                    <Breadcrumb
+                        items={[
+                            {
+                                label: "Home",
+                                to: "/"
+                            },
+                            {
+                                label: "Subjects",
+                                to: "/subjects"
+                            },
+                            {
+                                label:
+                                    data.topic
+                                        .category,
+                                to: `/subjects/${categorySlug}`
+                            },
+                            {
+                                label:
+                                    data.topic
+                                        .subject,
+                                to: `/subjects/${categorySlug}/${subjectSlug}`
+                            },
+                            {
+                                label:
+                                    data.topic.name
+                            }
                         ]}
-                        title={data.topic.name}
-                        description={`${data.topic.questionCount} questions · Page ${data.page} of ${data.totalPages} · Select an option to check your answer`}
                     />
-                )}
 
-                {loading && <p className="text-[var(--muted-foreground)]">Loading questions...</p>}
-                {error && <p className="text-[var(--destructive)]">{error}</p>}
+                    {/* Hero */}
 
-                {data && (
-                    <>
-                        <div className="space-y-5">
-                            {data.questions.map((question, index) => (
-                                <PracticeQuestion
-                                    key={question.id}
-                                    question={question}
-                                    questionNumber={startingQuestionNumber + index}
-                                />
-                            ))}
+                    <div className="rounded-2xl bg-green-800 text-white p-8">
+                        <h1 className="text-2xl font-bold">
+                            {data.topic.name}
+                        </h1>
+
+                        <p className="mt-3 text-green-100">
+                            Practice
+                            questions,
+                            understand
+                            explanations,
+                            and strengthen
+                            your concepts.
+                        </p>
+
+                        <div className="mt-5 flex gap-3 flex-wrap">
+                            <span className="bg-white/20 px-4 py-2 rounded-full text-sm">
+                                {
+                                    data
+                                        .topic
+                                        .questionCount
+                                }{" "}
+                                Questions
+                            </span>
+
+                            <span className="bg-white/20 px-4 py-2 rounded-full text-sm">
+                                Page {page} /
+                                {
+                                    data.totalPages
+                                }
+                            </span>
                         </div>
+                    </div>
+                </>
+            )}
 
-                        <Pagination
-                            page={data.page}
-                            totalPages={data.totalPages}
-                            onPageChange={handlePageChange}
+            {error && (
+                <div className="mt-6 rounded-xl border border-red-300 bg-red-50 p-4 text-red-700">
+                    {error}
+                </div>
+            )}
+
+            <div className="mt-8 space-y-6">
+                {data?.questions.map(
+                    (question, index) => (
+                        <PracticeQuestion
+                            key={
+                                question.id
+                            }
+                            question={
+                                question
+                            }
+                            questionNumber={
+                                startNum +
+                                index
+                            }
                         />
-                    </>
+                    )
                 )}
             </div>
+
+            {data && (
+                <div className="mt-10">
+                    <Pagination
+                        page={data.page}
+                        totalPages={
+                            data.totalPages
+                        }
+                        onPageChange={(
+                            p
+                        ) => {
+                            setSearchParams({
+                                page: String(
+                                    p
+                                )
+                            })
+
+                            window.scrollTo(
+                                0,
+                                0
+                            )
+                        }}
+                    />
+                </div>
+            )}
         </Layout>
     )
 }

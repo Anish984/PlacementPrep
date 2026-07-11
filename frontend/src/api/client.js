@@ -63,10 +63,11 @@ export const api = {
         }),
 
     // Playground quiz (saved sessions)
-    startQuiz: (topicId, count) =>
+    // Accepts an object: { categoryId?, subjectId?, topicId?, count }
+    startQuiz: (opts) =>
         request("/quiz/start", {
             method: "POST",
-            body: JSON.stringify({ topicId, count })
+            body: JSON.stringify(opts)
         }),
 
     submitQuizAnswer: (body) =>
@@ -79,6 +80,7 @@ export const api = {
         }),
 
     getQuizHistory: (page = 1) => request(`/quiz/history?page=${page}`),
+    getMultiplayerHistory: (page = 1) => request(`/quiz/multiplayer/history?page=${page}`),
 
     getDashboard: () => request("/analytics/dashboard"),
 

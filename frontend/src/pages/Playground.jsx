@@ -1,82 +1,101 @@
 import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import Layout from "../components/Layout"
-import PageHeader from "../components/PageHeader"
-import { Card, CardContent } from "../components/ui/Card"
-import { Button } from "../components/ui/button"
+import Breadcrumb from "../components/Breadcrumb"
 import { useAuth } from "../context/AuthContext"
 import { api } from "../api/client"
 
 export default function Playground() {
     const { user } = useAuth()
+
     const navigate = useNavigate()
     const location = useLocation()
 
     const [tree, setTree] = useState([])
+
     const [categoryId, setCategoryId] = useState("")
     const [subjectId, setSubjectId] = useState("")
-    const [topicId, setTopicId] = useState(location.state?.topicId || "")
-    const [questionCount, setQuestionCount] = useState(10)
+    const [topicId, setTopicId] = useState(
+        location.state?.topicId || ""
+    )
+
+    const [count, setCount] = useState(10)
+
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
 
     useEffect(() => {
-        api.getContentTree()
-            .then((contentTree) => {
-                setTree(contentTree)
+        api.getContentTree().then((data) => {
+            setTree(data)
 
-                if (location.state?.topicId) {
-                    preselectTopic(contentTree, location.state.topicId)
-                }
-            })
-            .catch((err) => setError(err.message))
-    }, [location.state?.topicId])
+            if (location.state?.topicId) {
+                for (const category of data) {
+                    for (const subject of category.subjects) {
+                        const topic = subject.topics.find(
+                            (t) =>
+                                t.id ===
+                                location.state.topicId
+                        )
 
-    function preselectTopic(contentTree, targetTopicId) {
-        for (const category of contentTree) {
-            for (const subject of category.subjects) {
-                const topic = subject.topics.find((t) => t.id === targetTopicId)
-                if (topic) {
-                    setCategoryId(category.id)
-                    setSubjectId(subject.id)
-                    setTopicId(topic.id)
-                    return
+                        if (topic) {
+                            setCategoryId(category.id)
+                            setSubjectId(subject.id)
+                            setTopicId(topic.id)
+                            return
+                        }
+                    }
                 }
             }
-        }
-    }
+        })
+    }, [location.state?.topicId])
 
-    const selectedCategory = tree.find((c) => c.id === categoryId)
-    const selectedSubject = selectedCategory?.subjects.find((s) => s.id === subjectId)
-    const selectedTopic = selectedSubject?.topics.find((t) => t.id === topicId)
-    const maxQuestions = selectedTopic?._count?.questions || 50
+    const category = tree.find(
+        (c) => c.id === categoryId
+    )
 
-    async function handleStart() {
+    const subject = category?.subjects.find(
+        (s) => s.id === subjectId
+    )
+
+    const selectedTopic = subject?.topics.find(
+        (t) => t.id === topicId
+    )
+
+    const maxQuestions =
+        selectedTopic?._count?.questions || 50
+
+    async function startQuiz() {
         if (!user) {
             navigate("/login")
             return
         }
 
-        if (!topicId) {
-            setError("Please select a topic")
+        if (!categoryId) {
+            setError(
+                "Please choose a category first."
+            )
             return
         }
 
-        setLoading(true)
-        setError("")
-
         try {
-            const result = await api.startQuiz(topicId, questionCount)
+            setLoading(true)
+            setError("")
+
+            const result =
+                await api.startQuiz({
+                    categoryId,
+                    subjectId:
+                        subjectId || undefined,
+                    topicId:
+                        topicId || undefined,
+                    count
+                })
+
             navigate("/quiz", {
-                state: {
-                    sessionId: result.sessionId,
-                    questions: result.questions,
-                    topic: result.topic,
-                    timeLimit: result.timeLimit
-                }
+                state: result
             })
-        } catch (err) {
-            setError(err.message)
+        } catch (e) {
+            setError(e.message)
         } finally {
             setLoading(false)
         }
@@ -85,13 +104,21 @@ export default function Playground() {
     if (!user) {
         return (
             <Layout>
-                <div className="page-container text-center py-20">
-                    <p className="text-[var(--muted-foreground)] mb-4">
-                        Sign in to use the timed Playground.
+                <div className="max-w-xl">
+                    <h1 className="text-3xl font-bold">
+                        Quiz Playground
+                    </h1>
+
+                    <p className="mt-4 text-gray-600 dark:text-gray-400">
+                        Please{" "}
+                        <Link
+                            to="/login"
+                            className="text-green-800 font-medium"
+                        >
+                            login
+                        </Link>{" "}
+                        to start quizzes.
                     </p>
-                    <Button asChild>
-                        <Link to="/login">Login</Link>
-                    </Button>
                 </div>
             </Layout>
         )
@@ -99,106 +126,235 @@ export default function Playground() {
 
     return (
         <Layout>
-            <div className="page-container max-w-xl">
-                <PageHeader
-                    breadcrumb={[{ label: "Home", to: "/" }, { label: "Playground" }]}
-                    title="Playground"
-                    description="Configure a timed quiz. Your score and answers are saved to your history and dashboard."
-                />
+            {/* <Breadcrumb
+                items={[
+                    {
+                        label: "Home",
+                        to: "/"
+                    },
+                    {
+                        label: "Quiz Playground"
+                    }
+                ]}
+            /> */}
 
-                {error && (
-                    <p className="text-[var(--destructive)] bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm">
-                        {error}
-                    </p>
-                )}
+            {/* <div className="max-w-2xl">
+                <h1 className="text-3xl font-bold">
+                    Quiz Playground
+                </h1>
 
-                <Card>
-                    <CardContent className="pt-6 space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Category</label>
-                            <select
-                                value={categoryId}
-                                onChange={(e) => {
-                                    setCategoryId(e.target.value)
-                                    setSubjectId("")
-                                    setTopicId("")
-                                }}
-                                className="w-full bg-white border border-[var(--border)] rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/30"
+                <p className="mt-3 text-gray-600 dark:text-gray-400">
+                    Create a custom quiz and test your
+                    placement preparation.
+                </p>
+            </div> */}
+
+            {error && (
+                <div className="mt-1 rounded-xl border border-red-300 bg-red-50 text-red-700 p-4">
+                    {error}
+                </div>
+            )}
+
+            <div className="mt-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
+                {/* Step 1 */}
+
+                <div>
+                    <div className="flex items-center gap-3 mb-1">
+                        <div className="h-8 w-8 rounded-full bg-green-800 text-white flex items-center justify-center text-sm font-bold">
+                            1
+                        </div>
+
+                        <h2 className="font-semibold text-lg">
+                            Choose Category
+                        </h2>
+                    </div>
+
+                    <select
+                        value={categoryId}
+                        onChange={(e) => {
+                            setCategoryId(
+                                e.target.value
+                            )
+                            setSubjectId("")
+                            setTopicId("")
+                        }}
+                        className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-3"
+                    >
+                        <option value="">
+                            Select Category
+                        </option>
+
+                        {tree.map((category) => (
+                            <option
+                                key={category.id}
+                                value={category.id}
                             >
-                                <option value="">Select category</option>
-                                {tree.map((category) => (
-                                    <option key={category.id} value={category.id}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </select>
+                                {category.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Step 2 */}
+
+                <div className="mt-8">
+                    <div className="flex items-center gap-3 mb-1">
+                        <div className="h-8 w-8 rounded-full bg-green-800 text-white flex items-center justify-center text-sm font-bold">
+                            2
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Subject</label>
-                            <select
-                                value={subjectId}
-                                onChange={(e) => {
-                                    setSubjectId(e.target.value)
-                                    setTopicId("")
-                                }}
-                                disabled={!categoryId}
-                                className="w-full bg-white border border-[var(--border)] rounded-lg p-3 text-sm disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/30"
-                            >
-                                <option value="">Select subject</option>
-                                {selectedCategory?.subjects.map((subject) => (
-                                    <option key={subject.id} value={subject.id}>
-                                        {subject.name}
-                                    </option>
-                                ))}
-                            </select>
+                        <h2 className="font-semibold text-lg">
+                            Choose Subject
+                        </h2>
+                    </div>
+
+                    <select
+                        value={subjectId}
+                        disabled={!categoryId}
+                        onChange={(e) => {
+                            setSubjectId(
+                                e.target.value
+                            )
+                            setTopicId("")
+                        }}
+                        className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-3"
+                    >
+                        <option value="">
+                            All Subjects
+                        </option>
+
+                        {category?.subjects.map(
+                            (subject) => (
+                                <option
+                                    key={subject.id}
+                                    value={
+                                        subject.id
+                                    }
+                                >
+                                    {subject.name}
+                                </option>
+                            )
+                        )}
+                    </select>
+                </div>
+
+                {/* Step 3 */}
+
+                <div className="mt-8">
+                    <div className="flex items-center gap-4 mb-1">
+                        <div className="h-8 w-8 rounded-full bg-green-800 text-white flex items-center justify-center text-sm font-bold">
+                            3
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Topic</label>
-                            <select
-                                value={topicId}
-                                onChange={(e) => setTopicId(e.target.value)}
-                                disabled={!subjectId}
-                                className="w-full bg-white border border-[var(--border)] rounded-lg p-3 text-sm disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/30"
-                            >
-                                <option value="">Select topic</option>
-                                {selectedSubject?.topics.map((topic) => (
-                                    <option key={topic.id} value={topic.id}>
-                                        {topic.name} ({topic._count.questions} questions)
-                                    </option>
-                                ))}
-                            </select>
+                        <h2 className="font-semibold text-lg">
+                            Choose Topic
+                        </h2>
+                    </div>
+
+                    <select
+                        value={topicId}
+                        disabled={!subjectId}
+                        onChange={(e) =>
+                            setTopicId(
+                                e.target.value
+                            )
+                        }
+                        className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-3"
+                    >
+                        <option value="">
+                            All Topics
+                        </option>
+
+                        {subject?.topics.map(
+                            (topic) => (
+                                <option
+                                    key={topic.id}
+                                    value={
+                                        topic.id
+                                    }
+                                >
+                                    {topic.name} (
+                                    {
+                                        topic
+                                            ._count
+                                            .questions
+                                    }{" "}
+                                    Questions)
+                                </option>
+                            )
+                        )}
+                    </select>
+                </div>
+
+                {/* Step 4 */}
+
+                <div className="mt-8">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="h-8 w-8 rounded-full bg-green-800 text-white flex items-center justify-center text-sm font-bold">
+                            4
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Questions: <span className="text-[var(--primary)]">{questionCount}</span>
-                            </label>
-                            <input
-                                type="range"
-                                min={5}
-                                max={Math.min(maxQuestions, 50)}
-                                value={questionCount}
-                                onChange={(e) => setQuestionCount(Number(e.target.value))}
-                                disabled={!topicId}
-                                className="w-full accent-[var(--primary)]"
-                            />
-                            <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                                30 seconds per question · difficulty-based scoring
-                            </p>
-                        </div>
+                        <h2 className="font-semibold text-lg">
+                            Number of Questions
+                        </h2>
+                    </div>
 
-                        <Button
-                            onClick={handleStart}
-                            disabled={loading || !topicId}
-                            className="w-full"
-                            size="lg"
-                        >
-                            {loading ? "Starting..." : "Start quiz"}
-                        </Button>
-                    </CardContent>
-                </Card>
+                    <input
+                        type="range"
+                        min={5}
+                        max={Math.min(
+                            maxQuestions,
+                            100
+                        )}
+                        value={count}
+                        onChange={(e) =>
+                            setCount(
+                                Number(
+                                    e.target.value
+                                )
+                            )
+                        }
+                        className="w-full"
+                    />
+
+                    <div className="mt-3 text-green-800 font-semibold">
+                        {count} Questions
+                    </div>
+                </div>
+
+                {/* Summary */}
+
+               {/* <div className="mt-10 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 p-5">
+                    <h3 className="font-semibold">
+                        Quiz Summary
+                    </h3>
+
+                    <div className="mt-3 text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                        <p>
+                            Questions: {count}
+                        </p>
+
+                        <p>
+                            Time Limit: 30 seconds
+                            per question
+                        </p>
+
+                        <p>
+                            Results will be saved to
+                             your history.
+                        </p>
+                    </div>
+                </div> */}
+
+                <button
+                    onClick={startQuiz}
+                    disabled={loading}
+                    className="mt-8 w-full bg-green-800 hover:bg-green-800 text-white py-4 rounded-xl font-semibold"
+                >
+                    {loading
+                        ? "Starting Quiz..."
+                        : "Start Quiz"}
+                </button>
             </div>
         </Layout>
     )
